@@ -358,6 +358,10 @@ class ExP():
         test_data = select_channels(test_data, self.selected_channels)
         print(f"   选择8通道后: {train_data.shape}")
 
+        # 保存到self (用于后续打印)
+        self.train_data = train_data
+        self.test_data = test_data
+
         train_data = np.expand_dims(train_data, axis=1)
         train_label = np.transpose(train_label)
 
