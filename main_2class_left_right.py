@@ -220,6 +220,7 @@ def load_data_2class(dir_path, dataset_type, n_sub):
 
     print(f"  原始数据: 训练集 {train_data_full.shape[0]} trials, 测试集 {test_data_full.shape[0]} trials")
     print(f"  2分类数据: 训练集 {train_data.shape[0]} trials, 测试集 {test_data.shape[0]} trials")
+    print(f"  训练数据维度: {train_data.shape} (应该是 N, 22, 1000)")
     print(f"  左手(0): 训练集 {(train_label==0).sum()}, 测试集 {(test_label==0).sum()}")
     print(f"  右手(1): 训练集 {(train_label==1).sum()}, 测试集 {(test_label==1).sum()}")
 
