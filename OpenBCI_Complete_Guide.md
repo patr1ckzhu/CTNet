@@ -1,4 +1,4 @@
-# OpenBCI 运动想象数据采集完整指南
+# OpenBCI 运动想象数据采集完整指南 （针对2b，2a见experiment—report）
 
 ## 目录
 - [前置准备](#前置准备)
