@@ -296,7 +296,8 @@ class TrainTestManager:
                         random_idx = random.randint(0, n_samples - 1)
                         start = seg * segment_length
                         end = (seg + 1) * segment_length
-                        new_sample[0, :, start:end] = class_data[random_idx, :, start:end]
+                        # 修复维度: class_data是(N, 1, 22, 1000),需要squeeze掉第2维
+                        new_sample[0, :, start:end] = class_data[random_idx, 0, :, start:end]
 
                     tmp_aug_data[aug_idx] = new_sample
                     tmp_aug_label[aug_idx] = class_id
