@@ -212,11 +212,11 @@ def load_data_2class(dir_path, dataset_type, n_sub):
 
     print(f"  DEBUG - 过滤后维度: {train_data.shape}")
 
-    # 转换维度: (N, 1000, 22) -> (N, 22, 1000) - 在过滤之后执行
-    train_data = np.transpose(train_data, (0, 2, 1))
-    test_data = np.transpose(test_data, (0, 2, 1))
+    # 数据已经是(N, 22, 1000)格式,不需要转置!
+    # train_data = np.transpose(train_data, (0, 2, 1))  # 注释掉
+    # test_data = np.transpose(test_data, (0, 2, 1))
 
-    print(f"  DEBUG - 转置后维度: {train_data.shape}")
+    print(f"  DEBUG - 最终维度: {train_data.shape}")
 
     # 重新映射标签: 1->0, 2->1 (方便pytorch交叉熵)
     train_label = train_label - 1  # 1->0, 2->1
