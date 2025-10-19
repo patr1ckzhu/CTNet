@@ -52,13 +52,15 @@ from torch.autograd import Variable
 
 # ==================== Channel Selection ====================
 # 选择的8个通道 (从channel_selector.py获取)
-# 请根据channel_selector.py的输出结果修改以下两个变量
+# 使用方法2 (互信息) 的结果 - 2025-10-19
 
-# 方法1: 手动指定通道索引 (从channel_selector.py的输出中获取)
-SELECTED_CHANNEL_INDICES = [7, 11, 9, 3, 14, 16, 1, 4]  # 默认值,请替换为实际结果
+# 方法2 (互信息 - 推荐): 基于2592个样本的数据驱动选择
+SELECTED_CHANNEL_INDICES = [20, 21, 16, 18, 13, 14, 11, 19]
+SELECTED_CHANNEL_NAMES = ['P2', 'POz', 'CP2', 'P1', 'CP3', 'CP1', 'C4', 'Pz']
 
-# 方法2: 手动指定通道名称 (可选)
-SELECTED_CHANNEL_NAMES = ['C3', 'C4', 'Cz', 'FCz', 'CP1', 'CP2', 'FC3', 'FC2']  # 默认值
+# 备选方案:
+# 方法1 (先验知识): [7, 11, 9, 3, 14, 16, 1, 5] - ['C3', 'C4', 'Cz', 'FCz', 'CP1', 'CP2', 'FC3', 'FC4']
+# 方法3 (RFE模型): [17, 0, 20, 21, 18, 15, 13, 9] - ['CP4', 'Fz', 'P2', 'POz', 'P1', 'CPz', 'CP3', 'Cz']
 
 
 def select_channels(data, channel_indices):
