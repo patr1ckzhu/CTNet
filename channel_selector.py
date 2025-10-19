@@ -167,8 +167,15 @@ class ChannelSelector:
 
         self.mi_scores = mi_scores
 
+        # 调试信息
+        print(f"\n🔍 调试信息:")
+        print(f"   mi_scores 形状: {mi_scores.shape}")
+        print(f"   mi_scores 内容: {mi_scores}")
+        print(f"   channel_names 数量: {len(self.channel_names)}")
+
         # 选择Top-K通道
         top_indices = np.argsort(mi_scores)[-self.n_channels:][::-1]
+        print(f"   top_indices: {top_indices}")
         selected_names = [self.channel_names[i] for i in top_indices]
 
         # 显示结果
