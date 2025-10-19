@@ -167,15 +167,8 @@ class ChannelSelector:
 
         self.mi_scores = mi_scores
 
-        # 调试信息
-        print(f"\n🔍 调试信息:")
-        print(f"   mi_scores 形状: {mi_scores.shape}")
-        print(f"   mi_scores 内容: {mi_scores}")
-        print(f"   channel_names 数量: {len(self.channel_names)}")
-
         # 选择Top-K通道
         top_indices = np.argsort(mi_scores)[-self.n_channels:][::-1]
-        print(f"   top_indices: {top_indices}")
         selected_names = [self.channel_names[i] for i in top_indices]
 
         # 显示结果
@@ -243,15 +236,33 @@ class ChannelSelector:
         print(f"\n⚙️  提取通道特征...")
         channel_features = self._extract_channel_features(X)
 
-        # RFE
+        # RFE (在特征级别选择,每个通道有5个特征)
         print(f"⚙️  执行递归特征消除 (可能需要几分钟)...")
         estimator = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
-        selector = RFE(estimator, n_features_to_select=self.n_channels, step=1)
+        # 选择 n_channels * 5 个特征 (每个通道5个特征)
+        selector = RFE(estimator, n_features_to_select=self.n_channels * 5, step=5)
         selector.fit(channel_features, y - 1)
 
-        # 获取选中的通道
-        selected_mask = selector.support_
-        selected_indices = np.where(selected_mask)[0].tolist()
+        # 获取选中的特征索引,并映射回通道索引
+        selected_feature_mask = selector.support_
+        selected_feature_indices = np.where(selected_feature_mask)[0]
+
+        # 每5个特征对应一个通道,计算通道索引
+        selected_channel_indices = np.unique(selected_feature_indices // 5)
+
+        # 如果选中的通道数超过要求,按照ranking选择top-k
+        if len(selected_channel_indices) > self.n_channels:
+            # 计算每个通道的平均ranking
+            channel_rankings = np.zeros(X.shape[1])
+            for ch in range(X.shape[1]):
+                feature_start = ch * 5
+                feature_end = feature_start + 5
+                channel_rankings[ch] = np.mean(selector.ranking_[feature_start:feature_end])
+
+            # 选择ranking最小的通道
+            selected_channel_indices = np.argsort(channel_rankings)[:self.n_channels]
+
+        selected_indices = selected_channel_indices.tolist()
         selected_names = [self.channel_names[i] for i in selected_indices]
 
         # 显示结果
