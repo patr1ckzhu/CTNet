@@ -200,10 +200,6 @@ def load_data_2class(dir_path, dataset_type, n_sub):
     test_data_full = test_mat['data']
     test_label_full = test_mat['label']
 
-    # 转换维度: (N, 1000, 22) -> (N, 22, 1000)
-    train_data_full = np.transpose(train_data_full, (0, 2, 1))
-    test_data_full = np.transpose(test_data_full, (0, 2, 1))
-
     # 🔥 只保留左手(class 1)和右手(class 2)
     # 左手: label==1, 右手: label==2
     train_mask = np.isin(train_label_full, [1, 2]).flatten()
@@ -213,6 +209,10 @@ def load_data_2class(dir_path, dataset_type, n_sub):
     train_label = train_label_full[train_mask]
     test_data = test_data_full[test_mask]
     test_label = test_label_full[test_mask]
+
+    # 转换维度: (N, 1000, 22) -> (N, 22, 1000) - 在过滤之后执行
+    train_data = np.transpose(train_data, (0, 2, 1))
+    test_data = np.transpose(test_data, (0, 2, 1))
 
     # 重新映射标签: 1->0, 2->1 (方便pytorch交叉熵)
     train_label = train_label - 1  # 1->0, 2->1
