@@ -372,7 +372,8 @@ class ExP():
                         tmp_data[rand_idx[rj], :, :, rj * number_segmentation_points:(rj + 1) * number_segmentation_points]
 
             aug_data.append(tmp_aug_data)
-            aug_label.append(tmp_label[:number_records_by_augmentation])
+            # 创建新的标签数组，而不是切片原有标签
+            aug_label.append(np.full(number_records_by_augmentation, clsAug, dtype=np.int64))
 
         aug_data = np.concatenate(aug_data)
         aug_label = np.concatenate(aug_label)
