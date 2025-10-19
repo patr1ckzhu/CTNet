@@ -268,7 +268,16 @@ class TrainTestManager:
         return dataset_train_data, dataset_test_data
 
     def data_aug(self, temp_train_data, temp_train_label):
-        """S&R数据增强 - 适配3分类"""
+        """
+        S&R数据增强 - 适配3分类
+
+        输入:
+            temp_train_data: (N, 22, 1000) - 没有通道维度
+            temp_train_label: (N, 1)
+        输出:
+            tmp_aug_data: (N_aug, 1, 22, 1000) - 添加了通道维度
+            tmp_aug_label: (N_aug, 1)
+        """
         n_segments = 8
         segment_length = int(1000 / n_segments)
 
@@ -286,7 +295,7 @@ class TrainTestManager:
 
         # 对每个类别进行增强
         for class_id in [0, 1, 2]:
-            class_data = temp_train_data[temp_train_label.flatten() == class_id]
+            class_data = temp_train_data[temp_train_label.flatten() == class_id]  # (N, 22, 1000)
             n_samples = class_data.shape[0]
 
             for aug_round in range(self.N_AUG):
@@ -297,8 +306,8 @@ class TrainTestManager:
                         random_idx = random.randint(0, n_samples - 1)
                         start = seg * segment_length
                         end = (seg + 1) * segment_length
-                        # 修复维度: class_data是(N, 1, 22, 1000),需要squeeze掉第2维
-                        new_sample[0, :, start:end] = class_data[random_idx, 0, :, start:end]
+                        # class_data是(N, 22, 1000), 直接索引
+                        new_sample[0, :, start:end] = class_data[random_idx, :, start:end]
 
                     tmp_aug_data[aug_idx] = new_sample
                     tmp_aug_label[aug_idx] = class_id
@@ -319,11 +328,7 @@ class TrainTestManager:
         # 标准化
         train_data, test_data = self.standard_normalize(train_data, test_data)
 
-        # 添加通道维度
-        train_data = np.expand_dims(train_data, axis=1)  # (N, 1, 22, 1000)
-        test_data = np.expand_dims(test_data, axis=1)
-
-        # 划分训练集和验证集
+        # 划分训练集和验证集 (在添加通道维度之前)
         n_train_samples = train_data.shape[0]
         n_validate = int(self.validate_ratio * n_train_samples)
 
@@ -331,13 +336,16 @@ class TrainTestManager:
         val_indices = indices[:n_validate]
         train_indices = indices[n_validate:]
 
-        val_data = train_data[val_indices]
-        val_label = train_label[val_indices]
         train_data_split = train_data[train_indices]
         train_label_split = train_label[train_indices]
 
-        # 数据增强
+        # 数据增强 (输入是(N, 22, 1000),输出是(N_aug, 1, 22, 1000))
         aug_data, aug_label = self.data_aug(train_data_split, train_label_split)
+
+        # 添加通道维度到验证集和测试集
+        val_data = np.expand_dims(train_data[val_indices], axis=1)
+        val_label = train_label[val_indices]
+        test_data = np.expand_dims(test_data, axis=1)
 
         print(f"  训练集: {aug_data.shape[0]} (增强后)")
         print(f"  验证集: {val_data.shape[0]}")
