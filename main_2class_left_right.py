@@ -109,15 +109,17 @@ class MultiHeadAttention(nn.Module):
 
 
 class ResidualAdd(nn.Module):
-    def __init__(self, fn):
+    def __init__(self, fn, emb_size, drop_p):
         super().__init__()
         self.fn = fn
+        self.drop = nn.Dropout(drop_p)
+        self.layernorm = nn.LayerNorm(emb_size)
 
     def forward(self, x, **kwargs):
-        res = x
-        x = self.fn(x, **kwargs)
-        x += res
-        return x
+        x_input = x
+        res = self.fn(x, **kwargs)
+        out = self.layernorm(self.drop(res)+x_input)
+        return out
 
 
 class FeedForwardBlock(nn.Sequential):
@@ -134,45 +136,72 @@ class TransformerEncoderBlock(nn.Sequential):
     def __init__(self, emb_size, num_heads=2, drop_p=0.5, forward_expansion=4, forward_drop_p=0.5):
         super().__init__(
             ResidualAdd(nn.Sequential(
-                nn.LayerNorm(emb_size),
                 MultiHeadAttention(emb_size, num_heads, drop_p),
-                nn.Dropout(drop_p)
-            )),
+            ), emb_size, drop_p),
             ResidualAdd(nn.Sequential(
-                nn.LayerNorm(emb_size),
-                FeedForwardBlock(
-                    emb_size, expansion=forward_expansion, drop_p=forward_drop_p),
-                nn.Dropout(drop_p)
-            )
-            ))
+                FeedForwardBlock(emb_size, expansion=forward_expansion, drop_p=forward_drop_p),
+            ), emb_size, drop_p)
+        )
 
 
 class TransformerEncoder(nn.Sequential):
-    def __init__(self, depth, emb_size):
-        super().__init__(*[TransformerEncoderBlock(emb_size) for _ in range(depth)])
+    def __init__(self, heads, depth, emb_size):
+        super().__init__(*[TransformerEncoderBlock(emb_size, heads) for _ in range(depth)])
+
+
+class PositioinalEncoding(nn.Module):
+    def __init__(self, embedding, length=100, dropout=0.1):
+        super().__init__()
+        self.dropout = nn.Dropout(dropout)
+        self.encoding = nn.Parameter(torch.randn(1, length, embedding))
+
+    def forward(self, x):
+        x = x + self.encoding[:, :x.shape[1], :].cuda()
+        return self.dropout(x)
 
 
 class ClassificationHead(nn.Sequential):
-    def __init__(self, emb_size, n_classes):
+    def __init__(self, flatten_number, n_classes):
         super().__init__()
         self.fc = nn.Sequential(
-            Reduce('b n e -> b e', reduction='mean'),
-            nn.LayerNorm(emb_size),
-            nn.Linear(emb_size, n_classes)
+            nn.Dropout(0.5),
+            nn.Linear(flatten_number, n_classes)
         )
 
     def forward(self, x):
         out = self.fc(x)
-        return x, out
+        return out
 
 
-class EEGTransformer(nn.Sequential):
-    def __init__(self, emb_size=16, depth=6, n_classes=2, number_channel=22, **kwargs):
-        super().__init__(
-            PatchEmbeddingCNN(emb_size=emb_size, number_channel=number_channel),
-            TransformerEncoder(depth, emb_size),
-            ClassificationHead(emb_size, n_classes)
-        )
+class EEGTransformer(nn.Module):
+    def __init__(self, heads=2, emb_size=16, depth=6, n_classes=2, number_channel=22,
+                 f1=8, kernel_size=64, D=2, pooling_size1=8, pooling_size2=8,
+                 dropout_rate=0.3, flatten_eeg1=240, **kwargs):
+        super().__init__()
+        self.number_class = n_classes
+        self.number_channel = number_channel
+        self.emb_size = emb_size
+        self.flatten_eeg1 = flatten_eeg1
+        self.flatten = nn.Flatten()
+
+        self.cnn = PatchEmbeddingCNN(f1=f1, kernel_size=kernel_size, D=D,
+                                    pooling_size1=pooling_size1, pooling_size2=pooling_size2,
+                                    dropout_rate=dropout_rate, number_channel=number_channel,
+                                    emb_size=emb_size)
+        self.position = PositioinalEncoding(emb_size, dropout=0.1)
+        self.trans = TransformerEncoder(heads, depth, emb_size)
+
+        self.flatten = nn.Flatten()
+        self.classification = ClassificationHead(flatten_eeg1, n_classes)
+
+    def forward(self, x):
+        cnn = self.cnn(x)
+        cnn = cnn * math.sqrt(self.emb_size)
+        cnn = self.position(cnn)
+        trans = self.trans(cnn)
+        features = cnn + trans
+        out = self.classification(self.flatten(features))
+        return features, out
 
 
 def load_data_2class(dir_path, dataset_type, n_sub):
@@ -357,10 +386,18 @@ class TrainTestManager:
 
         # 创建模型
         model = EEGTransformer(
+            heads=self.heads,
             emb_size=self.emb_size,
             depth=self.depth,
             n_classes=self.number_class,
-            number_channel=self.number_channel
+            number_channel=self.number_channel,
+            f1=8,
+            kernel_size=64,
+            D=2,
+            pooling_size1=8,
+            pooling_size2=8,
+            dropout_rate=0.5,
+            flatten_eeg1=240
         ).cuda()
 
         criterion = nn.CrossEntropyLoss().cuda()
