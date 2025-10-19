@@ -52,7 +52,7 @@ CHANNEL_NAMES_2A = [
 class ChannelSelector:
     """8通道自动选择器"""
 
-    def __init__(self, data_dir='../mymat_raw/', dataset_type='A', n_channels=8):
+    def __init__(self, data_dir='./mymat_raw/', dataset_type='A', n_channels=8):
         """
         初始化通道选择器
 
@@ -141,7 +141,8 @@ class ChannelSelector:
                 self.data_dir, self.dataset_type, sub
             )
             all_train_data.append(train_data)
-            all_train_label.append(train_label[0])
+            # train_label 的形状是 (n_trials, 1), 需要展平为 (n_trials,)
+            all_train_label.append(train_label.flatten())
             print(f"   受试者 {sub}: {train_data.shape[0]} trials")
 
         # 合并数据
@@ -218,7 +219,8 @@ class ChannelSelector:
                 self.data_dir, self.dataset_type, sub
             )
             all_train_data.append(train_data)
-            all_train_label.append(train_label[0])
+            # train_label 的形状是 (n_trials, 1), 需要展平为 (n_trials,)
+            all_train_label.append(train_label.flatten())
 
         X = np.vstack(all_train_data)
         y = np.hstack(all_train_label)
@@ -397,7 +399,7 @@ def main():
 
     # 初始化选择器
     selector = ChannelSelector(
-        data_dir='../mymat_raw/',
+        data_dir='./mymat_raw/',
         dataset_type='A',
         n_channels=8
     )
