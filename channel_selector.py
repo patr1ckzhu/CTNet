@@ -151,13 +151,20 @@ class ChannelSelector:
 
         print(f"\n📈 总数据: {X.shape[0]} trials, {X.shape[1]} channels, {X.shape[2]} timepoints")
 
-        # 提取每个通道的特征 (使用多种统计特征)
-        print(f"\n⚙️  计算通道特征...")
-        channel_features = self._extract_channel_features(X)
+        # 计算每个通道的互信息
+        print(f"\n⚙️  计算互信息...")
+        mi_scores = np.zeros(X.shape[1])  # 22个通道
 
-        # 计算互信息
-        print(f"⚙️  计算互信息...")
-        mi_scores = mutual_info_classif(channel_features, y - 1, random_state=42)
+        for ch in range(X.shape[1]):
+            # 对每个通道提取特征
+            ch_data = X[:, ch, :]  # (n_trials, n_timepoints)
+            ch_features = self._extract_single_channel_features(ch_data)
+
+            # 计算该通道的互信息
+            mi = mutual_info_classif(ch_features, y - 1, random_state=42)
+            # 取平均作为该通道的综合互信息得分
+            mi_scores[ch] = np.mean(mi)
+
         self.mi_scores = mi_scores
 
         # 选择Top-K通道
@@ -253,9 +260,31 @@ class ChannelSelector:
 
         return selected_indices, selected_names
 
+    def _extract_single_channel_features(self, ch_data):
+        """
+        从单个通道的EEG数据中提取特征
+
+        参数:
+            ch_data: (n_trials, n_timepoints)
+
+        返回:
+            features: (n_trials, n_features)
+        """
+        # 时域特征
+        mean = np.mean(ch_data, axis=1, keepdims=True)
+        std = np.std(ch_data, axis=1, keepdims=True)
+        variance = np.var(ch_data, axis=1, keepdims=True)
+        max_val = np.max(ch_data, axis=1, keepdims=True)
+        min_val = np.min(ch_data, axis=1, keepdims=True)
+
+        # 合并特征 (n_trials, 5)
+        features = np.hstack([mean, std, variance, max_val, min_val])
+
+        return features
+
     def _extract_channel_features(self, X):
         """
-        从EEG数据中提取通道级特征
+        从EEG数据中提取所有通道的特征 (用于RFE方法)
 
         参数:
             X: (n_trials, n_channels, n_timepoints)
@@ -268,16 +297,7 @@ class ChannelSelector:
 
         for ch in range(n_channels):
             ch_data = X[:, ch, :]  # (n_trials, n_timepoints)
-
-            # 时域特征
-            mean = np.mean(ch_data, axis=1, keepdims=True)
-            std = np.std(ch_data, axis=1, keepdims=True)
-            variance = np.var(ch_data, axis=1, keepdims=True)
-            max_val = np.max(ch_data, axis=1, keepdims=True)
-            min_val = np.min(ch_data, axis=1, keepdims=True)
-
-            # 合并特征
-            ch_features = np.hstack([mean, std, variance, max_val, min_val])
+            ch_features = self._extract_single_channel_features(ch_data)
             features.append(ch_features)
 
         # (n_trials, n_channels * 5)
