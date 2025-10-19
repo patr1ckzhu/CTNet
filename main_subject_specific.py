@@ -697,7 +697,7 @@ def main(dirs,
 
 if __name__ == "__main__":
     #----------------------------------------
-    DATA_DIR = r'../mymat_raw/'
+    DATA_DIR = r'./mymat_raw/'
     EVALUATE_MODE = 'LOSO-No' # leaving one subject out subject-dependent  subject-indenpedent
 
     N_SUBJECT = 9       # BCI 

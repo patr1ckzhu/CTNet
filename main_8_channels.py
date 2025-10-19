@@ -500,7 +500,7 @@ class ExP():
 
         # Test
         self.model.eval()
-        self.model = torch.load(self.model_filename).cuda()
+        self.model = torch.load(self.model_filename, weights_only=False).cuda()
         outputs_list = []
 
         with torch.no_grad():
@@ -626,7 +626,7 @@ def main(dirs, evaluate_mode='subject-dependent', heads=8, emb_size=48, depth=3,
 
 if __name__ == "__main__":
     # ==================== Configuration ====================
-    DATA_DIR = r'../mymat_raw/'
+    DATA_DIR = r'./mymat_raw/'
     EVALUATE_MODE = 'LOSO-No'  # subject-dependent
 
     N_SUBJECT = 9
